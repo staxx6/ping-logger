@@ -33,9 +33,9 @@ while ($true) {
 
   if(($pingCount % $tracertCount) -eq 0) {
     Write-Host "PingCount reached (or started) doing tracert and write it in file ..."
-    $tracertResults = Test-Connection -TargetName www.google.de -IPv6 -Traceroute -TimeoutSeconds 1 # Array kommt da raus
+    $tracertResults = Test-Connection -TargetName www.google.de -IPv6 -Traceroute -TimeoutSeconds 1
     foreach($hop in $tracertResults) {
-      $outText = $outText + " # $($hop.Hop) $($hop.HostName) $($hop.Ping) $($hop.Latency) $($hop.Status)"
+      $outText = $outText + " # hop $($hop.Hop) $($hop.HostName) pingNr. $($hop.Ping) latency $($hop.Latency) $($hop.Status) `r`n"
     }
     $outText = "Tracert: $($outText)"
     $outText | Out-File -FilePath .\logs\${fileName}.txt -Append
@@ -63,7 +63,7 @@ while ($true) {
   
       $tracertResults = Test-Connection -TargetName www.google.de -IPv6 -Traceroute -TimeoutSeconds 1 # Array kommt da raus
       foreach($hop in $tracertResults) {
-        $outText = $outText + " # $($hop.Hop) $($hop.HostName) $($hop.Ping) $($hop.Latency) $($hop.Status)"
+        $outText = $outText + " # $($hop.Hop) $($hop.HostName) $($hop.Ping) $($hop.Latency) $($hop.Status) `r`n"
       }
       Write-Host "-> Output in file"
       "$($timeStamp) - $($outText)" | Out-File -FilePath .\logs\${fileName}.txt -Append
@@ -74,3 +74,6 @@ while ($true) {
     }
   }
 }
+
+# Write-Host ((Get-Content .\count.txt | Measure-Object -Line).lines 
+# (get-content 'count.txt' | select-string -pattern "PING").length)
