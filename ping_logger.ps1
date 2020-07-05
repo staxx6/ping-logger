@@ -8,7 +8,6 @@
 $target = "www.google.de"
 $slowPingWarningTime = 30 # in ms
 $timeBetweenSeconds = 1
-$tracertAtLost = $false
 $timeoutSeconds = 1
 
 $startTime = Get-Date -Format "dd/MM/yyyy HH:mm:ss"
@@ -16,63 +15,48 @@ $startTimeUnderscore = Get-Date -Format "dd_MM_yyyy HH_mm_ss"
 $fileName = "$($startTimeUnderscore) $($target)"
 $tracertCount = 3600 # after 3600 pings do a tracert
 $pingCount = 0
+$outText = ""
 
 # Header
 $headerLine = "############################################################################################################"
 $headerText = "### Ping Logger ### $($startTime) ### Target: $($target) ### Time between: $($timeBetweenSeconds) s ### Timeout: $($timeoutSeconds) s ###"
+$header = "$($headerLine)`r`n$($headerText)`r`n$($headerLine)"
 
-Write-Host $headerLine
-Write-Host $headerText
-Write-Host $headerLine
-
-$headerLine | Out-File -FilePath .\logs\${fileName}.txt -Append
-$headerText | Out-File -FilePath .\logs\${fileName}.txt -Append
-$headerLine | Out-File -FilePath .\logs\${fileName}.txt -Append
+Write-Host $header
+$header | Out-File -FilePath .\logs\${fileName}.txt -Append
 
 while ($true) {
 
+  # Tracert
   if(($pingCount % $tracertCount) -eq 0) {
-    Write-Host "PingCount reached (or started) doing tracert and write it in file ..."
-    $tracertResults = Test-Connection -TargetName www.google.de -IPv6 -Traceroute -TimeoutSeconds 1
+    Write-Host "PingCount reached (or started) doing tracert and write result in file ..."
+    $tracertResults = Test-Connection -TargetName www.google.de -IPv4 -Traceroute -TimeoutSeconds 1
     foreach($hop in $tracertResults) {
       $outText = $outText + " # hop $($hop.Hop) $($hop.HostName) pingNr. $($hop.Ping) latency $($hop.Latency) $($hop.Status) `r`n"
     }
-    $outText = "Tracert: $($outText)"
+    $outText = "Tracert:`r`n$($outText)"
     $outText | Out-File -FilePath .\logs\${fileName}.txt -Append
   }
-  $pingCount = $pingCount + 1
 
+  # Wait for next pint
   Start-Sleep -Seconds $timeBetweenSeconds
-  $pingResult = Test-Connection -TargetName www.google.de -IPv6 -Ping -Count 1 -TimeoutSeconds $timeoutSeconds
+
+  # ping
+  $pingResult = Test-Connection -TargetName www.google.de -IPv4 -Ping -Count 1 -TimeoutSeconds $timeoutSeconds
   $timeStamp = Get-Date -Format "dd/MM/yyyy HH:mm:ss"
-  $outText = ""
+  $outText = "$timeStamp - $($pingResult.DisplayAddress) $($pingResult.Latency) ms $($pingResult.Status)"
 
   if ($pingResult.Status -eq "Success") {
     if ($pingResult.Latency -gt $slowPingWarningTime) {
-      $outText = "$timeStamp - $($pingResult.DisplayAddress) $($pingResult.Latency) ms $($pingResult.Status) - Slow ping"
-    } else {
-      $outText = "$timeStamp - $($pingResult.DisplayAddress) $($pingResult.Latency) ms $($pingResult.Status)"
+      $outText = $outText + " - Ping SLOW"
     }
-    $outText | Out-File -FilePath .\logs\${fileName}.txt -Append
-    Write-Host $outText
   } else {
-    if($tracertAtLost) {
-      $outText = "Ping lost - tracert:"
-      Write-Host $outText
-      $outText | Out-File -FilePath .\logs\${fileName}.txt -Append
-  
-      $tracertResults = Test-Connection -TargetName www.google.de -IPv6 -Traceroute -TimeoutSeconds 1 # Array kommt da raus
-      foreach($hop in $tracertResults) {
-        $outText = $outText + " # $($hop.Hop) $($hop.HostName) $($hop.Ping) $($hop.Latency) $($hop.Status) `r`n"
-      }
-      Write-Host "-> Output in file"
-      "$($timeStamp) - $($outText)" | Out-File -FilePath .\logs\${fileName}.txt -Append
-    } else {
-      $outText = "$timeStamp - $($pingResult.DisplayAddress) $($pingResult.Latency) ms $($pingResult.Status) - Ping LOST"
-      $outText | Out-File -FilePath .\logs\${fileName}.txt -Append
-      Write-Host $outText
-    }
+    $outText = $outText + " - Ping LOST"
   }
+  $outText | Out-File -FilePath .\logs\${fileName}.txt -Append
+  Write-Host $outText
+
+  $pingCount = $pingCount + 1
 }
 
 # Write-Host ((Get-Content .\count.txt | Measure-Object -Line).lines 
