@@ -1,5 +1,5 @@
 <# 
-  title: ping recorder
+  title: ping logger
   author: staxx6
   date: 03.04.2020
 #>
